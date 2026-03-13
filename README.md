@@ -2,6 +2,12 @@
 # BrepGPT: Autoregressive B-rep Generation with Voronoi Half-Patch  [![arXiv](https://img.shields.io/badge/arXiv-2511.22171-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2511.22171)
 ![teaser](assets/teaser.jpg)
 
+---
+
+This repository provides the official code of BrepGPT, accepted to SIGGRAPH Asia 2025 (Journal Track).
+
+---
+
 B-rep is the standard CAD representation, but its irregular graph structure — where geometry and topology are tightly coupled at multiple levels — makes it difficult to handle with deep learning.
 
 Beyond the generative network, one contribution of this work is the **Voronoi Half-Patch (VHP)** representation. VHP decomposes a B-rep into local units defined on half-edges, each encoding geometry and topology in a fixed-dimensional format. This converts a B-rep — an irregular graph — into a set of uniform tokens directly consumable by deep learning, supporting both edge-level and vertex-level latent representations. BrepGPT demonstrates this with an autoregressive Transformer, but VHP is framework-agnostic: its uniform structure is equally compatible with diffusion models or other generative approaches.
@@ -21,7 +27,7 @@ pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
 
 ## Usage
 
-This repository provides a VHP (Voronoi Half-Patch) data processing pipeline for BrepGPT, consisting of two stages:
+We provides a VHP (Voronoi Half-Patch) data processing pipeline for BrepGPT, consisting of two stages:
 
 ```
 STEP files  ──brep2VHP──►  VHP graphs (.bin)  ──VHP2brep──►  STEP files
@@ -30,7 +36,7 @@ STEP files  ──brep2VHP──►  VHP graphs (.bin)  ──VHP2brep──► 
 
 ### Stage 1: brep2VHP
 
-Convert your own B-Rep models (STEP format) into VHP graph data for training. Edit the `ROOT` path in the script, then run:
+Convert your own B-rep models (STEP format) into VHP graph data for training. Edit the `ROOT` path in the script, then run:
 
 ```bash
 cd VHP/brep2VHP
@@ -41,7 +47,7 @@ The script runs four steps in sequence: scale and split closed faces/edges → h
 
 ### Stage 2: VHP2brep
 
-Reconstruct B-Rep STEP models from VHP graphs. Edit the `ROOT` path in the script, then run:
+Reconstruct B-rep STEP models from VHP graphs. Edit the `ROOT` path in the script, then run:
 
 ```bash
 cd VHP/VHP2brep

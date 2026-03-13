@@ -26,9 +26,7 @@ python split_duplicate_edges.py \
     --processes 48 \
     --timeout 300
 
-echo "  ===============
-  Sampling VHP...
-  ==============="
+echo "Sampling VHP..."
 
 python VHP_sampling.py \
     --input-dir "${ROOT}/simple" \

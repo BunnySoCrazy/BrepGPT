@@ -4,7 +4,7 @@
 
 ---
 
-This repository provides the official code of BrepGPT, accepted to SIGGRAPH Asia 2025 (Journal Track).
+This repository provides the official code of **BrepGPT**, accepted to SIGGRAPH Asia 2025 (Journal Track).
 
 ---
 

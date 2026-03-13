@@ -71,6 +71,12 @@ Two surface fitting strategies are available (toggle via `--use-uv` in the scrip
 - [x] VHP data processing code
 - [ ] Model training and inference code
 
+## Related Resources
+
+- **[3DNB](https://github.com/BunnySoCrazy/3DNB)** — Extension of this work
+- **[Awesome-Neural-CAD](https://github.com/BunnySoCrazy/Awesome-Neural-CAD)** — Curated list of neural CAD generation research
+- **[Awesome-3D-Generation](https://github.com/BunnySoCrazy/Awesome-3D-Generation)** — Curated list of 3D generation research
+
 
 ## Citation
 

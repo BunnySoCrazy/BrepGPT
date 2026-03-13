@@ -37,7 +37,7 @@ cd VHP/brep2VHP
 bash brep2VHP.sh
 ```
 
-The script runs four steps in sequence: scale and split closed faces/edges → handle inner wires → resolve duplicate edges → sample VHP graphs. The output `.bin` files are DGL graphs encoding vertex positions, Voronoi-sampled surface points along each half-edge, and half-edge connectivity.
+The script runs four steps in sequence: scale and split closed faces/edges → handle inner wires → resolve duplicate edges → sample VHP graphs. The output `.bin` files are DGL graphs.
 
 ### Stage 2: VHP2brep
 

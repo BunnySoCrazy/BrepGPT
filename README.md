@@ -71,7 +71,7 @@ Two surface fitting strategies are available (toggle via `--use-uv` in the scrip
 ## Release Progress
 
 - [x] VHP data processing code
-- [ ] Model training and inference code
+- [x] Model training and inference code
 
 ## Related Resources
 

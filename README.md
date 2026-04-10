@@ -21,6 +21,8 @@ conda activate brepgpt
 mamba install occwl -c lambouj -c conda-forge -y
 conda install pytorch pytorch-cuda=12.1 -c pytorch -c nvidia -y
 pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
+pip install pytorch-lightning
+pip install vector-quantize-pytorch==1.22.15
 ```
 
 

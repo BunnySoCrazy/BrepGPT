@@ -1,0 +1,18 @@
+{
+  "dataset": "DeepCAD",
+  "data_root": "path/to/your/dataset",
+  "num_epochs": 300,
+  "batch_size": 64,
+  "learning_rate": 0.0005,
+  "betas": [0.9, 0.999],
+
+  "crv_emb_dim": 64,
+  "vertex_emb_dim": 16,
+  "hidden_dim_encode": 1024,
+  "hidden_dim_decode": 1024,
+  "n_layers_encode": 6,
+
+  "node_feature_dim": 16,
+  "num_codebooks": 4,
+  "codebook_size": 4096
+}

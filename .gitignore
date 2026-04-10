@@ -2,6 +2,7 @@ test/
 *.pt
 *.pth
 *.ckpt
+*.pkl
 *.h5
 *.onnx
 *.bin
@@ -12,6 +13,7 @@ test/
 logs/
 wandb/
 mlruns/
+lightning_logs/
 
 __pycache__/
 *.pyc

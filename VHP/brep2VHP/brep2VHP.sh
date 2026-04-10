@@ -34,5 +34,5 @@ python VHP_sampling.py \
     --num-workers 12 \
     --max-files 10 \
     --max-vertices 512 \
-    --edge-samples 12 \
+    --edge-samples 6 \
     --normal-samples 5

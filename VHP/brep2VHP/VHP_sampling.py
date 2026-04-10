@@ -333,6 +333,59 @@ def sample_face_voronoi_g(shape, edge_samples=8, normal_samples=16, wire_info_li
     return _build_dgl_graph(edges, vertex_coords, edge_samples_dict, edge_inner_outer_dict, edge_next, edge_uv_dict)
 
 
+def normalize_graph(graph, num_curve_samples=6, num_normal_samples=4):
+    pos_data = graph.ndata['x']
+    points_data = graph.edata['x']
+
+    graph.ndata.pop('x')
+    graph.edata.pop('x')
+
+    graph.ndata['x'] = pos_data
+    graph.edata['x'] = points_data
+
+    g = graph
+    src, dst = g.edges()
+
+    if 'next_idx' in g.edata and 'next_half_edge' in g.edata:
+        for eid in range(g.number_of_edges()):
+            ref_point = g.ndata["x"][dst[eid]]
+            next_eid = g.edata['next_idx'][eid].item()
+            next_edge_data = g.edata['x'][next_eid]
+
+            next_half_edge = next_edge_data[:num_normal_samples, 0, :].clone()
+            next_half_edge[0, :] = next_half_edge[0, :] - ref_point
+
+            for i in range(1, num_normal_samples):
+                next_half_edge[i, :] = next_half_edge[i, :] - next_half_edge[i - 1, :]
+
+            g.edata['next_half_edge'][eid] = next_half_edge
+
+    for eid in range(g.number_of_edges()):
+        edge_data = g.edata["x"][eid]
+
+        start_points = g.ndata["x"][src[eid]]
+        end_points   = g.ndata["x"][dst[eid]]
+
+        g.edata["x"][eid][:, 1:num_normal_samples, :] = (
+            g.edata["x"][eid][:, 1:num_normal_samples, :]
+            - g.edata["x"][eid][:, 0:num_normal_samples - 1, :]
+        )
+
+        t = torch.linspace(
+            0, 1, num_curve_samples + 2, device=edge_data.device
+        )[1:-1]
+        interpolated_points = (
+            start_points.unsqueeze(0).unsqueeze(0) * (1 - t).unsqueeze(-1).unsqueeze(0)
+            + end_points.unsqueeze(0).unsqueeze(0) * t.unsqueeze(-1).unsqueeze(0)
+        )
+
+        g.edata["x"][eid][:, 0, :] = (
+            g.edata["x"][eid][:, 0, :] - interpolated_points.squeeze(0)
+        )
+
+    return g
+
+
 def _build_dgl_graph(edges, vertex_coords, edge_samples_dict, edge_inner_outer_dict, edge_next, edge_uv_dict=None):
     """Convert collected data into a DGL graph with tensor features."""
     g = dgl.graph(edges)
@@ -374,7 +427,7 @@ def _build_dgl_graph(edges, vertex_coords, edge_samples_dict, edge_inner_outer_d
         uv_array = np.array([edge_uv_dict[e] for e in edges])
         g.edata["uv"] = torch.from_numpy(uv_array).float()
 
-    return g
+    return normalize_graph(g)
 
 
 def _collect_wire_vertex_coords(wire):

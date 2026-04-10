@@ -84,12 +84,8 @@ def load_graph(bin_file):
     return graph
 
 
-def inverse_process_graph(graph, num_curve_samples=8, num_normal_samples=4):
-    """Restore absolute coordinates from the normalized graph representation.
-
-    Edge features are stored as offsets; this converts them back to
-    world-space positions by undoing the normalization applied during encoding.
-    """
+def inverse_process_graph(graph, num_curve_samples=6, num_normal_samples=4):
+    """De-normalize edge geometry: recover absolute coordinates from relative offsets."""
     g = graph
     src, dst = g.edges()
     g.edata['ori_edge_data'] = g.edata["x"].clone()
@@ -97,25 +93,22 @@ def inverse_process_graph(graph, num_curve_samples=8, num_normal_samples=4):
     for eid in range(g.number_of_edges()):
         edge_data = g.edata["x"][eid].clone()
         next_edge_data = g.edata["next_half_edge"][eid].clone()
-        start_pt = g.ndata["x"][src[eid]]
-        end_pt = g.ndata["x"][dst[eid]]
-
-        edge_length = 1
-        edge_data = edge_data * edge_length
+        start_points = g.ndata["x"][src[eid]]
+        end_points = g.ndata["x"][dst[eid]]
 
         t = torch.linspace(0, 1, num_curve_samples + 2, device=edge_data.device)[1:-1]
-        interp = (
-            start_pt.unsqueeze(0).unsqueeze(0) * (1 - t).unsqueeze(-1).unsqueeze(0)
-            + end_pt.unsqueeze(0).unsqueeze(0) * t.unsqueeze(-1).unsqueeze(0)
+        interpolated_points = (
+            start_points.unsqueeze(0).unsqueeze(0) * (1 - t).unsqueeze(-1).unsqueeze(0)
+            + end_points.unsqueeze(0).unsqueeze(0) * t.unsqueeze(-1).unsqueeze(0)
         )
 
-        edge_data[:, 0, :] += interp.squeeze(0)
+        edge_data[:, 0, :] = edge_data[:, 0, :] + interpolated_points.squeeze(0)
         for i in range(1, num_normal_samples):
-            edge_data[:, i, :] += edge_data[:, i - 1, :]
+            edge_data[:, i, :] = edge_data[:, i, :] + edge_data[:, i - 1, :]
 
-        next_edge_data[0, :] += end_pt
+        next_edge_data[0, :] = next_edge_data[0, :] + end_points
         for i in range(1, num_normal_samples):
-            next_edge_data[i, :] += next_edge_data[i - 1, :]
+            next_edge_data[i, :] = next_edge_data[i, :] + next_edge_data[i - 1, :]
 
         g.edata["x"][eid] = edge_data
         g.edata["next_half_edge"][eid] = next_edge_data
@@ -620,8 +613,8 @@ def process_and_export_model(bin_file, output_dir, use_uv=False, debug=False):
         print(f"ERROR: {bin_file} has no UV data. Re-run VHP_sampling with record_uv=True.")
         return
 
-    # 2. De-normalize (currently identity; kept for future use)
-    # graph = inverse_process_graph(graph)
+    # 2. De-normalize
+    graph = inverse_process_graph(graph)
 
     # 3. Build half-edge structure
     vertices, halfedges, edge_map = build_halfedge_structure(graph)
@@ -660,7 +653,7 @@ def process_and_export_model(bin_file, output_dir, use_uv=False, debug=False):
 
     # 7. Match inner loops to outer faces and rebuild with holes
     matched_pairs, _ = match_inner_wires_to_faces(
-        outer_faces, inner_loops, distance_threshold=1e-2,
+        outer_faces, inner_loops, distance_threshold=5e-2,
     )
     new_faces = create_faces_with_inner_loops(outer_faces, matched_pairs)
 

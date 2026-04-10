@@ -233,7 +233,7 @@ def _fit_bspline_edge(points_3d):
     for i, (x, y, z) in enumerate(points_3d):
         arr.SetValue(i + 1, gp_Pnt(x, y, z))
 
-    fitter = GeomAPI_PointsToBSpline(arr, 0, 8, GeomAbs_C2, 1e-3)
+    fitter = GeomAPI_PointsToBSpline(arr, 0, 8, GeomAbs_C2, 5e-3)
     if not fitter.IsDone():
         return None
 
@@ -301,7 +301,7 @@ def build_face_with_retry(
 
         if isinstance(pts_tensor, torch.Tensor) and pts_tensor.dim() == 3:
             mid = pts_tensor.shape[0] // 2
-            for offset in (0, -1, 1):
+            for offset in [0, -1, 1]:
                 row = pts_tensor[mid + offset, 1:-1, :]
                 pts = [(float(p[0]), float(p[1]), float(p[2])) for p in row]
                 if len(pts) >= 2:
@@ -310,13 +310,17 @@ def build_face_with_retry(
         edge_idx += 1
         exp.Next()
 
-    # -- Normalize to unit bounding box --
+    # -- Normalize to unit bounding box ([-0.5, 0.5]^3) --
     bbox = Bnd_Box()
     brepbndlib_Add(fixed_wire, bbox)
     xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-    cx, cy, cz = (xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2
-    diag = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2 + (zmax - zmin) ** 2)
-    scale = max(diag, 1e-12)
+
+    cx = (xmin + xmax) / 2.0
+    cy = (ymin + ymax) / 2.0
+    cz = (zmin + zmax) / 2.0
+
+    extent = max(xmax - xmin, ymax - ymin, zmax - zmin)
+    scale = max(extent, 1e-12)
 
     trsf_fwd = gp_Trsf()
     trsf_fwd.SetTranslation(gp_Vec(-cx, -cy, -cz))
@@ -344,29 +348,30 @@ def build_face_with_retry(
         norm_wire_edges.append(topods_Edge(exp2.Current()))
         exp2.Next()
 
-    # -- Normalize interior curves and fit BSpline edges --
+    # -- Normalize interior curves with the SAME transform, then fit BSplines --
+    def _apply_trsf(trsf, xyz):
+        p = gp_Pnt(xyz[0], xyz[1], xyz[2])
+        p.Transform(trsf)
+        return (p.X(), p.Y(), p.Z())
+
     norm_constraint_edges = []
     for curve_pts in all_interior_curves:
-        norm_pts = [
-            ((x - cx) / scale, (y - cy) / scale, (z - cz) / scale)
-            for x, y, z in curve_pts
-        ]
+        norm_pts = [_apply_trsf(trsf_norm, p) for p in curve_pts]
         edge = _fit_bspline_edge(norm_pts)
         if edge is not None:
             norm_constraint_edges.append(edge)
-    
+        # -- Precompute Coons face (available for 2-4 edges) --
+        norm_coons_face = None
+        if 2 <= len(norm_wire_edges) <= 4:
+            try:
+                norm_coons_face = make_coons(norm_wire_edges)
+            except Exception:
+                pass
+
     # Representative points for interface compatibility
     points_list_all = [
         curve_pts[len(curve_pts) // 2] for curve_pts in all_interior_curves
     ]
-
-    # -- Precompute Coons face (available for 2-4 edges) --
-    norm_coons_face = None
-    if 2 <= len(norm_wire_edges) <= 4:
-        try:
-            norm_coons_face = make_coons(norm_wire_edges)
-        except Exception:
-            pass
 
     # -- Helper: run filling and validate --
     def _try_filling(params_list, constraint_edges):

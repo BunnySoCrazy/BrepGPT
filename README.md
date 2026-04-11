@@ -27,46 +27,82 @@ pip install vector-quantize-pytorch==1.22.15
 
 
 
-## Usage
+## Voronoi Half-Patch (VHP)
 
-We provides a VHP (Voronoi Half-Patch) data processing pipeline for BrepGPT, consisting of two stages:
+VHP is a network-agnostic 3D representation that converts B-reps into uniform, fixed-dimensional tokens defined on half-edges — compatible with autoregressive models, diffusion models, or any other generative framework. See [`VHP/README.md`](VHP/README.md) for details.
 
-```
-STEP files  ──brep2VHP──►  VHP graphs (.bin)  ──VHP2brep──►  STEP files
-              (training data preparation)          (reconstruction)
-```
+## Data
 
-### Stage 1: brep2VHP
+### Pre-processed DeepCAD dataset
 
-Convert your own B-rep models (STEP format) into VHP graph data for training. Edit the `ROOT` path in the script, then run:
+Pre-processed VHP graphs for the DeepCAD dataset are available on **[Google Drive](https://drive.google.com/drive/folders/1BczW0SsSlGo440C4QxmqjfSYI9qpK5lL?usp=drive_link)** — download and use directly, no data preparation needed.
+
+
+### Prepare your own data
+
+To convert your own STEP files into VHP graphs, see [`VHP/README.md`](VHP/README.md) for the full pipeline. In brief:
+
+**Step 1 — STEP → VHP graphs**
+
+Edit the `ROOT` path in `VHP/brep2VHP/brep2VHP.sh`, then run:
 
 ```bash
 cd VHP/brep2VHP
 bash brep2VHP.sh
 ```
 
-The script runs four steps in sequence: scale and split closed faces/edges → handle inner wires → resolve duplicate edges → sample VHP graphs. The output `.bin` files are DGL graphs.
+This runs four preprocessing steps in sequence: scale and split closed faces/edges → handle inner wires → resolve duplicate edges → sample VHP graphs. Output `.bin` files are DGL graphs with the following fields:
 
-### Stage 2: VHP2brep
+| Field | Shape | Description |
+|---|---|---|
+| `graph.ndata['x']` | `[N, 3]` | Vertex coordinates |
+| `graph.edata['x']` | `[E, 6, 4, 3]` | VHP samples (curve × surface normals × 3D) |
+| `graph.edata['next_half_edge']` | `[E, 4, 3]` | Next half-edge curve samples |
+| `graph.edata['edge_inner_outer']` | `[E, 1]` | Inner / outer loop flag |
 
-Reconstruct B-rep STEP models from VHP graphs. Edit the `ROOT` path in the script, then run:
+**Step 2 — VHP graphs → STEP**
+
+To reconstruct STEP files from generated VHP graphs after inference, see the VHP2brep section in [`VHP/README.md`](VHP/README.md).
+
+---
+
+
+## Usage
+
+### Training
+
+Update `data_root` in `specs.json` to point to the downloaded (or prepared) VHP graph directory.
+
+Training follows three steps (see `scripts/train.sh`):
+
+**Step 1 — Train VQVAE encoders**
 
 ```bash
-cd VHP/VHP2brep
-bash VHP2brep.sh
+python train_LT.py -e cnnt/DeepCAD -m cnnt_vq
+python train_LT.py -e vhp/DeepCAD -m vhp_vq
 ```
 
-Two surface fitting strategies are available (toggle via `--use-uv` in the script):
+**Step 2 — Encode dataset with trained VQVAE**
 
-**Standard mode** (default, as described in the paper): builds faces using `BRepFill_Filling` with Voronoi interior point constraints. No UV data required. Works well for models dominated by planar and simple curved surfaces.
+```bash
+python encode_LT.py -e cnnt/DeepCAD -m cnnt_vq
+python encode_LT.py -e vhp/DeepCAD -m vhp_vq
+```
 
-**UV mode** (`--use-uv`): fits a B-spline surface via `GeomAPI_PointsToBSplineSurface` using RBF-interpolated UV→XYZ mappings. More robust for complex freeform surfaces.
+**Step 3 — Train GPT**
 
-| | Standard mode | UV mode |
-|---|---|---|
-| Surface method | `BRepFill_Filling` | `GeomAPI_PointsToBSplineSurface` |
-| UV data needed | No | Yes |
-| Best for | Planar / simple curved surfaces | Complex freeform surfaces |
+```bash
+python train_LT.py -e gpt/DeepCAD -m gpt
+```
+
+### Inference
+
+```bash
+python infer_LT.py -g gpt/DeepCAD -c cnnt/DeepCAD -v vhp/DeepCAD -n 32
+```
+
+See `scripts/infer.sh` for reference.
+
 
 ## Release Progress
 

@@ -21,7 +21,7 @@ def main(args):
         dataset = dataloader_cnnt.CnntDataset(specs, split='train')
     elif args.mode == 'vhp_vq':
         model = Trainer_vhp_vq(specs)
-        dataset = dataloader_vhp.VhpDataset(specs, split='train', cache_dir=experiment_directory)
+        dataset = dataloader_vhp.VhpDataset(specs, split='train')
 
     loader = dataset.get_dataloader(batch_size=64, shuffle=False, num_workers=4)
 

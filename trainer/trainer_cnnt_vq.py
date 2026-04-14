@@ -308,5 +308,6 @@ class Trainer_cnnt_vq(pl.LightningModule):
             'filename': [x['filename'] for x in outputs],
             'node_coordinates': [x['node_coordinates'] for x in outputs],
         }
-        with open('data/DeepCAD_cnnt_encoding.pkl', 'wb') as f:
+
+        with open(f'data/{self.specs["dataset"]}_cnnt_encoding.pkl', 'wb') as f:
             pickle.dump(save_dict, f)

@@ -146,7 +146,7 @@ def calculate_face_sampling_info(face, edge_samples):
 
         for i, (edge, curve, first, last) in enumerate(wire_edges_info):
             edge_orientation = edge.Orientation()
-            params = np.linspace(first, last, edge_samples)
+            params = np.linspace(first, last, edge_samples+2)[1:-1]
 
             prev_edge_info = wire_edges_info[i - 1]
             next_edge_info = wire_edges_info[(i + 1) % num_edges]
@@ -159,10 +159,6 @@ def calculate_face_sampling_info(face, edge_samples):
                 other_curves = []
                 for e, c, f, l in wire_edges_info:
                     if e == edge:
-                        continue
-                    if j == 0 and e == prev_edge_info[0]:
-                        continue
-                    if j == len(params) - 1 and e == next_edge_info[0]:
                         continue
                     other_curves.append((c, f, l))
 
@@ -265,7 +261,7 @@ def sample_face_voronoi_g(shape, edge_samples=8, normal_samples=16, wire_info_li
                     continue
 
                 curve, first, last = BRep_Tool.CurveOnSurface(edge, face)
-                params = np.linspace(first, last, edge_samples)
+                params = np.linspace(first, last, edge_samples+2)[1:-1]
 
                 edge_points = []
                 edge_uv_points = [] if record_uv else None  # Store UV for this edge
@@ -283,8 +279,8 @@ def sample_face_voronoi_g(shape, edge_samples=8, normal_samples=16, wire_info_li
                     )
                     sample_id += 1
 
-                    # actual_step = max_distance / (normal_samples + 1)
-                    actual_step = max_distance / normal_samples
+                    actual_step = max_distance / (normal_samples + 1)
+                    # actual_step = max_distance / normal_samples
 
                     normal_points = []
                     normal_uv_points = [] if record_uv else None  # Store UV for this sample
@@ -492,7 +488,10 @@ def process_step_file(step_file_path, input_dir, output_dir, edge_samples, norma
 
     Returns a status string: 'ok' on success, or a short skip reason.
     """
-    shape = Compound.load_step_with_attributes(str(step_file_path))[0]
+    try:
+        shape = Compound.load_step_with_attributes(str(step_file_path))[0]
+    except Exception as e:
+        return f"skip:load_error"
 
     try:
         vertex_count = shape.num_vertices()
